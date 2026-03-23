@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Uptime Monitor · Akın Üner</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0c12;color:#fff;font-family:'Courier New',monospace;min-height:100vh;}
+#app{max-width:900px;margin:0 auto;padding:40px 20px 80px;}
+h1{font-size:2.5rem;font-weight:900;margin-bottom:4px;}
+h1 span{color:#00e5ff;}
+.sub{font-size:11px;letter-spacing:4px;color:rgba(255,255,255,.4);text-transform:uppercase;margin-bottom:32px;}
+
+/* Add form */
+.form{background:#111420;border:1px solid rgba(255,255,255,.08);padding:20px;margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;}
+.form input,.form select{background:#0a0c12;border:1px solid rgba(255,255,255,.1);color:#fff;font-family:'Courier New',monospace;font-size:13px;padding:10px 12px;flex:1;min-width:140px;outline:none;}
+.form input:focus,.form select:focus{border-color:#00e5ff;}
+.form input::placeholder{color:rgba(255,255,255,.3);}
+.form select{flex:0;min-width:120px;cursor:pointer;}
+.form button{padding:10px 24px;background:#00e5ff;border:none;color:#000;font-family:'Courier New',monospace;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.form button:hover{background:#00ff88;}
+
+/* Stats */
+.stats{display:flex;gap:2px;margin-bottom:16px;}
+.stat{flex:1;background:#111420;border:1px solid rgba(255,255,255,.08);padding:14px;text-align:center;}
+.stat-n{font-size:1.8rem;font-weight:700;}
+.stat-n.g{color:#00ff88;}.stat-n.r{color:#ff3355;}
+.stat-l{font-size:10px;letter-spacing:3px;color:rgba(255,255,255,.3);text-transform:uppercase;margin-top:3px;}
+
+/* Empty */
+.empty{background:#111420;border:1px solid rgba(255,255,255,.08);padding:60px 20px;text-align:center;color:rgba(255,255,255,.3);font-size:13px;letter-spacing:2px;}
+
+/* Site card */
+.card{background:#111420;border:1px solid rgba(255,255,255,.08);margin-bottom:2px;}
+.card.up{border-color:rgba(0,255,136,.2);}
+.card.down{border-color:rgba(255,51,85,.3);}
+.card-top{display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer;}
+.dot{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.2);flex-shrink:0;}
+.dot.up{background:#00ff88;box-shadow:0 0 8px #00ff88;}
+.dot.down{background:#ff3355;box-shadow:0 0 8px #ff3355;animation:blink 1s ease-in-out infinite;}
+.dot.checking{background:#ffd600;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.2;}}
+.info{flex:1;min-width:0;}
+.name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.url{font-size:11px;color:rgba(255,255,255,.4);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.resp{font-size:12px;color:rgba(255,255,255,.4);flex-shrink:0;min-width:60px;text-align:right;}
+.badge{padding:3px 10px;font-size:10px;letter-spacing:2px;text-transform:uppercase;border:1px solid;flex-shrink:0;}
+.badge.up{color:#00ff88;border-color:rgba(0,255,136,.3);}
+.badge.down{color:#ff3355;border-color:rgba(255,51,85,.3);}
+.badge.checking{color:#ffd600;border-color:rgba(255,214,0,.3);}
+.remove{background:none;border:none;color:rgba(255,255,255,.2);cursor:pointer;font-size:16px;padding:0 4px;flex-shrink:0;}
+.remove:hover{color:#ff3355;}
+
+/* History */
+.history{padding:0 20px 16px;display:none;}
+.card.open .history{display:block;}
+.hist-label{font-size:9px;letter-spacing:3px;color:rgba(255,255,255,.25);text-transform:uppercase;margin-bottom:8px;}
+.bars{display:flex;gap:2px;align-items:flex-end;height:40px;}
+.bar{flex:1;border-radius:1px;min-height:3px;}
+.bar.up{background:#00ff88;opacity:.65;}
+.bar.down{background:#ff3355;opacity:.8;}
+.bar.pending{background:rgba(255,255,255,.1);}
+.meta{display:flex;gap:20px;margin-top:8px;flex-wrap:wrap;}
+.meta span{font-size:10px;letter-spacing:1px;color:rgba(255,255,255,.3);text-transform:uppercase;}
+.meta b{color:#fff;}
+
+/* Toast */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(6px);padding:10px 20px;background:#111420;border:1px solid rgba(255,255,255,.1);color:#fff;font-size:12px;letter-spacing:1px;opacity:0;transition:all .3s;z-index:999;white-space:nowrap;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div id="app">
+  <h1>UPTIME<span>WATCH</span></h1>
+  <div class="sub">Website Monitor · Akın Üner</div>
+
+  <div class="form">
+    <input id="iUrl"  type="url"  placeholder="https://github.com"/>
+    <input id="iName" type="text" placeholder="Name (optional)"/>
+    <select id="iInt">
+      <option value="30">Every 30s</option>
+      <option value="60" selected>Every 1min</option>
+      <option value="300">Every 5min</option>
+    </select>
+    <button onclick="add()">+ Add</button>
+  </div>
+
+  <div class="stats" id="stats" style="display:none">
+    <div class="stat"><div class="stat-n" id="sTotal">0</div><div class="stat-l">Sites</div></div>
+    <div class="stat"><div class="stat-n g" id="sUp">0</div><div class="stat-l">Online</div></div>
+    <div class="stat"><div class="stat-n r" id="sDown">0</div><div class="stat-l">Offline</div></div>
+    <div class="stat"><div class="stat-n" id="sAvg">—</div><div class="stat-l">Avg ms</div></div>
+  </div>
+
+  <div id="list"><div class="empty">🌐 &nbsp; No sites added yet. Add a URL above to start monitoring.</div></div>
+</div>
+<div id="toast"></div>
+
+<script>
+var DB = {}, TM = {}, toastT;
+
+function toast(m){
+  var t=document.getElementById('toast');
+  t.textContent=m; t.classList.add('show');
+  clearTimeout(toastT);
+  toastT=setTimeout(function(){t.classList.remove('show');},2200);
+}
+
+function save(){ try{localStorage.setItem('um',JSON.stringify(DB));}catch(e){} }
+function loadDB(){
+  try{
+    var d=localStorage.getItem('um');
+    if(d) DB=JSON.parse(d);
+  }catch(e){DB={};}
+}
+
+function nameOf(url){ try{return new URL(url).hostname.replace('www.','');}catch(e){return url;} }
+
+function add(){
+  var url  = document.getElementById('iUrl').value.trim();
+  var name = document.getElementById('iName').value.trim();
+  var intv = parseInt(document.getElementById('iInt').value);
+  if(!url){ toast('Enter a URL'); return; }
+  if(!/^https?:\/\//i.test(url)) url='https://'+url;
+  if(DB[url]){ toast('Already added!'); return; }
+  var s={url:url,name:name||nameOf(url),intv:intv,status:'checking',ms:null,hist:new Array(30).fill('p'),up:0,total:0,last:null};
+  DB[url]=s;
+  save();
+  document.getElementById('iUrl').value='';
+  document.getElementById('iName').value='';
+  addCard(s);
+  updateStats();
+  monitor(s);
+  toast('✓ '+s.name+' added!');
+}
+
+function del(url){
+  clearInterval(TM[url]);
+  delete TM[url];
+  delete DB[url];
+  save();
+  var c=document.getElementById('c-'+btoa(url).replace(/=/g,''));
+  if(c) c.remove();
+  updateStats();
+  if(!Object.keys(DB).length){
+    document.getElementById('list').innerHTML='<div class="empty">🌐 &nbsp; No sites added yet. Add a URL above to start monitoring.</div>';
+    document.getElementById('stats').style.display='none';
+  }
+}
+
+function toggle(id){ var c=document.getElementById(id); if(c) c.classList.toggle('open'); }
+
+function cid(url){ return 'c-'+btoa(url).replace(/=/g,''); }
+
+function bars(hist){
+  return hist.map(function(h){
+    var ht=h==='u'?Math.floor(55+Math.random()*35):h==='d'?18:8;
+    var cls=h==='u'?'up':h==='d'?'down':'pending';
+    return '<div class="bar '+cls+'" style="height:'+ht+'%"></div>';
+  }).join('');
+}
+
+function addCard(s){
+  document.getElementById('stats').style.display='flex';
+  var old=document.querySelector('.empty');
+  if(old) old.remove();
+  var id=cid(s.url);
+  var div=document.createElement('div');
+  div.className='card checking';
+  div.id=id;
+  div.innerHTML=
+    '<div class="card-top" onclick="toggle(\''+id+'\')">'+
+      '<div class="dot checking" id="dot-'+id+'"></div>'+
+      '<div class="info">'+
+        '<div class="name">'+esc(s.name)+'</div>'+
+        '<div class="url">'+esc(s.url)+'</div>'+
+      '</div>'+
+      '<div class="resp" id="ms-'+id+'">—</div>'+
+      '<div class="badge checking" id="badge-'+id+'">CHECKING</div>'+
+      '<button class="remove" onclick="event.stopPropagation();del(\''+esc(s.url)+'\')">✕</button>'+
+    '</div>'+
+    '<div class="history">'+
+      '<div class="hist-label">Last 30 checks</div>'+
+      '<div class="bars" id="bars-'+id+'">'+bars(s.hist)+'</div>'+
+      '<div class="meta">'+
+        '<span>Uptime: <b id="upt-'+id+'">0%</b></span>'+
+        '<span>Checks: <b id="chk-'+id+'">0</b></span>'+
+        '<span>Last: <b id="lst-'+id+'">—</b></span>'+
+      '</div>'+
+    '</div>';
+  document.getElementById('list').appendChild(div);
+}
+
+function updateCard(s){
+  var id=cid(s.url);
+  var card=document.getElementById(id); if(!card) return;
+  var open=card.classList.contains('open');
+  card.className='card '+(s.status==='up'?'up':s.status==='down'?'down':'checking')+(open?' open':'');
+  var g=function(i){return document.getElementById(i);};
+  var dot=g('dot-'+id);   if(dot)  dot.className='dot '+s.status;
+  var bdg=g('badge-'+id); if(bdg){ bdg.className='badge '+s.status; bdg.textContent=s.status==='up'?'ONLINE':s.status==='down'?'OFFLINE':'CHECKING'; }
+  var ms=g('ms-'+id);     if(ms)   ms.textContent=s.ms?s.ms+'ms':'—';
+  var br=g('bars-'+id);   if(br)   br.innerHTML=bars(s.hist);
+  var u=g('upt-'+id);     if(u)    u.textContent=s.total?Math.round(s.up/s.total*100)+'%':'0%';
+  var c=g('chk-'+id);     if(c)    c.textContent=s.total;
+  var l=g('lst-'+id);     if(l)    l.textContent=s.last||'—';
+}
+
+function updateStats(){
+  var list=Object.values(DB);
+  var up=list.filter(function(s){return s.status==='up';}).length;
+  var down=list.filter(function(s){return s.status==='down';}).length;
+  var mss=list.filter(function(s){return s.ms;}).map(function(s){return s.ms;});
+  var avg=mss.length?Math.round(mss.reduce(function(a,b){return a+b;},0)/mss.length):null;
+  document.getElementById('sTotal').textContent=list.length;
+  document.getElementById('sUp').textContent=up;
+  document.getElementById('sDown').textContent=down;
+  document.getElementById('sAvg').textContent=avg?avg+'ms':'—';
+}
+
+function monitor(s){
+  if(TM[s.url]) clearInterval(TM[s.url]);
+  check(s);
+  TM[s.url]=setInterval(function(){check(s);},s.intv*1000);
+}
+
+function check(s){
+  s.status='checking';
+  updateCard(s);
+  var t=Date.now();
+  fetch(s.url,{method:'HEAD',mode:'no-cors',cache:'no-cache'})
+  .then(function(){
+    s.status='up'; s.ms=Date.now()-t;
+    s.total++; s.up++;
+    s.last=new Date().toLocaleTimeString();
+    s.hist.push('u'); if(s.hist.length>30) s.hist.shift();
+    save(); updateCard(s); updateStats();
+  })
+  .catch(function(){
+    s.status='down'; s.ms=null;
+    s.total++;
+    s.last=new Date().toLocaleTimeString();
+    s.hist.push('d'); if(s.hist.length>30) s.hist.shift();
+    save(); updateCard(s); updateStats();
+  });
+}
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;'); }
+
+// Enter key
+document.getElementById('iUrl').addEventListener('keydown',function(e){ if(e.key==='Enter') add(); });
+
+// Init
+loadDB();
+var keys=Object.keys(DB);
+if(keys.length){
+  document.getElementById('stats').style.display='flex';
+  document.querySelector('.empty') && document.querySelector('.empty').remove();
+  keys.forEach(function(k){ addCard(DB[k]); monitor(DB[k]); });
+  updateStats();
+}
+</script>
+</body>
+</html>
