@@ -16,7 +16,7 @@
 
 ## 🎬 Demo
 
-![Demo](screenshot.gif)
+![Demo](https://github.com/professoralbay/uptime-monitor/blob/main/Animation%20(1).gif)
 
 ---
 
